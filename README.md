@@ -1,7 +1,7 @@
-# ŠÖ”Œ^Œ¾Œê‚É‚æ‚éƒQ[ƒ€ŠJ”­‚ÌƒTƒ“ƒvƒ‹ƒR[ƒh
+ï»¿# é–¢æ•°åž‹è¨€èªžã«ã‚ˆã‚‹ã‚²ãƒ¼ãƒ é–‹ç™ºã®ã‚µãƒ³ãƒ—ãƒ«ã‚³ãƒ¼ãƒ‰
 
-ŠJ”­Œ¾Œê: F# 2.0
-ƒ‰ƒCƒuƒ‰ƒŠ: .NET Framework 4.0 (XNA‚Í–¢Žg—pA‰æ–Ê‚ÍƒRƒ“ƒ\[ƒ‹‚Ì‚Ý)
+é–‹ç™ºè¨€èªž: F# 2.0
+ãƒ©ã‚¤ãƒ–ãƒ©ãƒª: .NET Framework 4.0 (XNAã¯æœªä½¿ç”¨ã€ç”»é¢ã¯ã‚³ãƒ³ã‚½ãƒ¼ãƒ«ã®ã¿)
 
 <hr/>
 
