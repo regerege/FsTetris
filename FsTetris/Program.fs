@@ -11,12 +11,20 @@ module Program =
     let Main (_) =
         Console.CursorVisible <- false
         Console.Title <- "テトリス？"
-        game.ScreenUpdate.Add(fun bits ->
+//        game.ScreenUpdate.Add(fun bits ->
+//            Console.Clear()
+//            bits |> Seq.iter(fun bit ->
+//                Convert.ToString(bit, 2).PadLeft(20, '0')
+//                |> Seq.map(fun x -> if x = '1' then "■" else "□")
+//                |> Seq.reduce(+)
+//                |> Console.WriteLine))
+//        game.Run()
+        GameTetris.run()
+        |> Seq.iter (fun bits ->
             Console.Clear()
             bits |> Seq.iter(fun bit ->
                 Convert.ToString(bit, 2).PadLeft(20, '0')
                 |> Seq.map(fun x -> if x = '1' then "■" else "□")
                 |> Seq.reduce(+)
                 |> Console.WriteLine))
-        game.Run()
         0

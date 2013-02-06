@@ -85,3 +85,40 @@ type Tetris (config : TetrisConfig) =
     /// 画面描画イベント
     [<CLIEvent>]
     member x.ScreenUpdate = _screenEvent.Publish
+
+module GameTetris =
+    let run () =
+        let init_bit = [ for y = 1 to 34 do yield 0 ]
+        let sw = new Stopwatch()
+        sw.Start()
+        Seq.unfold (fun (fps_timer : Stopwatch,fps_time : int64) ->
+            Some((fps_timer, fps_time), (fps_timer, fps_time))
+        ) (sw, 60L)
+        // poling
+        |> Seq.map (fun (s : Stopwatch,t) ->
+            while s.ElapsedMilliseconds < t do()
+            s.Restart()
+            t)
+        // clock count
+        |> Seq.scan (fun c t -> if c <= 1000 then c + 1 else 1) 1
+        // clock check
+        |> Seq.filter (fun c -> c % 17 = 0)
+        // fall block calculation
+        |> Seq.scan (fun (screen_bit : int list, block_bit : int list) clock ->
+            let block_bit2 =
+                if block_bit |> Seq.forall ((=)0) then
+                    let b = TetrisCommon.getFallBlock()
+                    let l = b.Length
+                    List.append
+                        <| [ for y = 1 to(4 - l) do yield 0 ]@b         // 画面外の領域 (ブロック生成部)
+                        <| [ for y = 1 to 30 do yield 0 ]
+                else
+                    [0]@block_bit |> Seq.take (block_bit.Length) |> Seq.toList
+            (screen_bit, block_bit2)) (init_bit,init_bit)
+        // output screen & block
+        |> Seq.map (fun (sb,bb) ->
+            Seq.zip sb bb
+            |> Seq.map (fun (a,b) -> a ||| b)
+            |> Seq.toArray |> fun arr -> arr.[4..]
+            |> Seq.toList)
+
