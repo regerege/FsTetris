@@ -2,6 +2,7 @@
 open System
 open System.Collections
 open System.Diagnostics
+open System.Threading.Tasks
 
 /// キー入力ハンドラ
 type KeyInputHandler = delegate of char -> char
@@ -86,35 +87,42 @@ type Tetris (config : TetrisConfig) =
     [<CLIEvent>]
     member x.ScreenUpdate = _screenEvent.Publish
 
+/// 後々下記の書き方に直す "予定"
 module GameTetris =
-    let run () =
+    let run (initKey) (fTask : unit -> Task<'a>) (fmapkey : 'a -> int * int) =
         let init_bit = [ for y = 1 to 34 do yield 0 ]
         let sw = new Stopwatch()
         sw.Start()
-        Seq.unfold (fun (fps_timer : Stopwatch,fps_time : int64) ->
-            Some((fps_timer, fps_time), (fps_timer, fps_time))
-        ) (sw, 60L)
-        // poling
-        |> Seq.map (fun (s : Stopwatch,t) ->
-            while s.ElapsedMilliseconds < t do()
-            s.Restart()
-            t)
-        // clock count
-        |> Seq.scan (fun c t -> if c <= 1000 then c + 1 else 1) 1
-        // clock check
-        |> Seq.filter (fun c -> c % 17 = 0)
-        // fall block calculation
-        |> Seq.scan (fun (screen_bit : int list, block_bit : int list) clock ->
+        let rec loop t ret (task:Task<'a>) = seq {
+            let (ret2,task2) =
+                if task.IsCompleted then task.Result, fTask()
+                else ret,task
+            while 100L <= sw.ElapsedMilliseconds do
+                yield (t,ret2,task2)
+                sw.Restart()
+            yield! loop (t+1L) ret2 task2
+            } 
+        loop 0L initKey (fTask())
+//        |> Seq.filter (fun (t,_) -> t % 7L = 0L)
+        // fall block calculation
+        |> Seq.scan (fun (screen_bit : int list, block_bit :int list) (_,key,_) ->
+            let (moveX,moveY) = fmapkey key
             let block_bit2 =
                 if block_bit |> Seq.forall ((=)0) then
                     let b = TetrisCommon.getFallBlock()
                     let l = b.Length
                     List.append
-                        <| [ for y = 1 to(4 - l) do yield 0 ]@b         // 画面外の領域 (ブロック生成部)
-                        <| [ for y = 1 to 30 do yield 0 ]
+                        <| [ for y = 1 to (4-l) do yield 0 ]@b
+                        <| [ for y = 1 to 30 do yield 0]
                 else
-                    [0]@block_bit |> Seq.take (block_bit.Length) |> Seq.toList
-            (screen_bit, block_bit2)) (init_bit,init_bit)
+                    let block =
+                        if moveX = 1 && List.forall (fun n -> n % 2 = 0) block_bit then
+                            block_bit |> List.map (fun n -> n >>> 1)
+                        elif moveX = -1 && List.forall (fun n -> n >>> 19 = 0) block_bit then
+                            block_bit |> List.map (fun n -> n <<< 1)
+                        else block_bit
+                    [0]@block |> Seq.take (block_bit.Length) |> Seq.toList
+            (screen_bit, block_bit2)) (init_bit, init_bit)
         // output screen & block
         |> Seq.map (fun (sb,bb) ->
             Seq.zip sb bb
