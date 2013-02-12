@@ -4,129 +4,145 @@ open System.Collections
 open System.Diagnostics
 open System.Threading.Tasks
 
-/// キー入力ハンドラ
-type KeyInputHandler = delegate of char -> char
+(*
+テトリスに必要な情報
+・画面の横幅
+・画面の縦幅
+・ブロックの位置
+・積み上がったブロック全体の情報（スクリーン情報）
+・得点
+・経過時間　（入力動作の監視、描画タイミング、ブロックの移動タイミング、ブロックの回転タイミング）
+・ブロックの落下計算間隔計算関数ポインタ（点数から速度を計算する）
+・現在の入力動作　（入力情報）
+・動作処理後の初期入力動作（入力情報がない場合の初期値）
+・入力を受け取るための関数ポインタ (とりあえず Task<'a> で受け取れる形と限定する。)
+・独自入力値をTetrisInputBehaviorに変換する関数ポインタ
+*)
 
-/// テトリス設定情報
-type TetrisConfig (input : KeyInputHandler, fps_time : int64) =
-    /// キーイベントの取得
-    member x.KeyInputEvent = input
-    /// FPSタイマーの既定値を取得
-    member x.FpsTime = fps_time
+/// Behavior definition of Tetris
+type TetrisInputBehavior =
+    /// No Action
+    | None
+    /// Moved to the left block
+    | Left
+    /// Moved to the right block
+    | Right
+    /// Turning it counterclockwise block
+    | LeftTurn
+    /// Turning it clockwise block
+    | RightTurn
+    /// Fall to the block
+    | Fall
 
-/// テトリスゲーム クラス
-type Tetris (config : TetrisConfig) =
-    /// FPS用タイマー
-    let _fpsTimer = new Stopwatch()
-    /// ブロックタイマー
-    let _blockTimer = new Stopwatch()
-    /// 描画イベント
-    let _screenEvent = new Event<int list>()
-    
-//#region Game Main Logic
-    
-    /// FPS処理計算
-    let _fpsLogic (lastkey:char option) (bits : int list) (blockbit : int list) : bool * char option =
-        if config.FpsTime <= _fpsTimer.ElapsedMilliseconds then
-            /// 画面描画イベント
-            _screenEvent.Trigger(
-                Seq.zip bits blockbit |> Seq.toArray |> (fun arr -> arr.[5..])
-                |> Seq.map (fun (a,b) -> a ||| b)
-                |> Seq.toList)
-            true, lastkey
-        else false, lastkey
+/// All the configuration information of Tetris
+type TetrisConfig<'a> = {
+        /// Screen Width
+        Width : int
+        /// Screen Height
+        Height : int
+        /// Screen region
+        Region : int
+        /// Fall Block
+        BlockBit : int list
+        /// Screen
+        ScreenBit : int list
+        /// Score
+        Score : int64
+        /// Interval calculation of the block fall
+        /// int : The height of the block wich was extinguished
+        /// int64 : current score
+        /// int64 : calculation interval time (ms)
+        IntervalBlockFallTime : int -> int64 -> int64
+        /// State value of block behavior
+        InputBehavior : TetrisInputBehavior
+        /// Current Behavior Task
+        InputBehaviorTask : Task<'a>
+        /// Create new Task for custom behavior
+        CreateInputTask : unit -> Task<'a>
+        /// Tetris behavior converted for a custom behavior
+        ConvertToTetrisBehavior : 'a -> TetrisInputBehavior
+    }
 
-    let _initFallBlock () =
-        [
-            0b00000001000000000000
-            0b00000001000000000000
-            0b00000001000000000000
-            0b00000001000000000000
-        ]
-
-    /// ブロックの落下計算
-    let _moveBlock (bits : int list) (blockbit : int list) =
-            if 25L <= _blockTimer.ElapsedMilliseconds then
-                if blockbit |> Seq.forall ((=)0) then
-                    let b = TetrisCommon.getFallBlock()
-                    let l = b.Length
-                    List.append
-                        <| [ for y = 1 to(4 - l) do yield 0 ]@b         // 画面外の領域 (ブロック生成部)
-                        <| [ for y = 1 to 30 do yield 0 ]
-                else
-                    [0]@blockbit |> Seq.take (blockbit.Length) |> Seq.toList
-                , true
-            else blockbit, false
-
-    /// <summary>ゲームのメインコード</summary>
-    /// <param name="bits">ブロックの配置情報</param>
-    let rec gameStart (lastkey:char option) (bits : int list) (blockbit : int list) : unit =
-        /// その他FPSの計算
-        let (reset_fps, key) = _fpsLogic lastkey bits blockbit
-
-        /// 落下ブロックの計算
-        let (blockbit2, reset_block) = _moveBlock bits blockbit
-
-        /// タイマーを初期化後に再帰ループ
-        if reset_fps then _fpsTimer.Restart()
-        if reset_block then _blockTimer.Restart()
-        gameStart key bits blockbit2
-
-//#endregion
-
-    /// ゲームの実行
-    member x.Run() =
-        _fpsTimer.Start()
-        _blockTimer.Start()
-        gameStart
-            <| None
-            <| [for y in 1..34 -> 0 ]
-            <| [for y in 1..34 -> 0 ]
-        
-    /// 画面描画イベント
-    [<CLIEvent>]
-    member x.ScreenUpdate = _screenEvent.Publish
-
-/// 後々下記の書き方に直す "予定"
+/// Tetris
 module GameTetris =
-    let run (initKey) (fTask : unit -> Task<'a>) (fmapkey : 'a -> int * int) =
-        let init_bit = [ for y = 1 to 34 do yield 0 ]
-        let sw = new Stopwatch()
-        sw.Start()
-        let rec loop t ret (task:Task<'a>) = seq {
-            let (ret2,task2) =
-                if task.IsCompleted then task.Result, fTask()
-                else ret,task
-            while 100L <= sw.ElapsedMilliseconds do
-                yield (t,ret2,task2)
-                sw.Restart()
-            yield! loop (t+1L) ret2 task2
-            } 
-        loop 0L initKey (fTask())
-//        |> Seq.filter (fun (t,_) -> t % 7L = 0L)
-        // fall block calculation
-        |> Seq.scan (fun (screen_bit : int list, block_bit :int list) (_,key,_) ->
-            let (moveX,moveY) = fmapkey key
-            let block_bit2 =
-                if block_bit |> Seq.forall ((=)0) then
-                    let b = TetrisCommon.getFallBlock()
-                    let l = b.Length
-                    List.append
-                        <| [ for y = 1 to (4-l) do yield 0 ]@b
-                        <| [ for y = 1 to 30 do yield 0]
-                else
-                    let block =
-                        if moveX = 1 && List.forall (fun n -> n % 2 = 0) block_bit then
-                            block_bit |> List.map (fun n -> n >>> 1)
-                        elif moveX = -1 && List.forall (fun n -> n >>> 19 = 0) block_bit then
-                            block_bit |> List.map (fun n -> n <<< 1)
-                        else block_bit
-                    [0]@block |> Seq.take (block_bit.Length) |> Seq.toList
-            (screen_bit, block_bit2)) (init_bit, init_bit)
-        // output screen & block
-        |> Seq.map (fun (sb,bb) ->
-            Seq.zip sb bb
-            |> Seq.map (fun (a,b) -> a ||| b)
-            |> Seq.toArray |> fun arr -> arr.[4..]
-            |> Seq.toList)
+    /// dropping the new block
+    let getFallBlock (conf : TetrisConfig<'a>) =
+        let b = TetrisCommon.getFallBlock()
+        let l = b.Length
+        List.append
+            <| [ for y = 1 to (4-l) do yield 0 ]@b
+            <| [ for y = 0 to conf.Height do yield 0]
+    /// calculation of input behavior
+    let behaviorBlock (block : int list) (behavior : TetrisInputBehavior) =
+        let op_lr =
+            match behavior with
+            | TetrisInputBehavior.Left -> fun a b -> b <<< a
+            | TetrisInputBehavior.Right -> fun a b -> b >>> a
+            | _ -> (*)
+        List.map (op_lr 1) block
+    /// calculation of block and screen
+    let calcBlockAndScreen (conf : TetrisConfig<'a>) =
+        // block of state after the movement
+        let mb =
+            if conf.BlockBit |> Seq.forall ((=)0) then
+                getFallBlock conf
+            else
+                let block = behaviorBlock conf.BlockBit conf.InputBehavior
+                [0]@block |> Seq.take (conf.Region) |> Seq.toList
+        // Whether movement
+        let wm =
+            Seq.zip mb conf.ScreenBit
+            |> Seq.map (fun (a,b) -> a &&& b)
+            |> Seq.forall ((=)0)
+        // if non-movement to the screen
+        let sb =
+            if wm then conf.ScreenBit
+            else
+                Seq.zip conf.BlockBit conf.ScreenBit
+                |> Seq.map (fun (a,b) -> a ||| b)
+                |> Seq.toList
+        (if wm then mb else getFallBlock conf), sb
 
+    let run (config : TetrisConfig<'a>) =
+        let stopWatch = new Stopwatch()
+        stopWatch.Start()
+        let rec loop (conf : TetrisConfig<'a>) (calc_flag:bool) =
+            seq {
+                // calculation
+                let conf2 =
+                    if calc_flag then
+                        let (block_bit, screen_bit) = calcBlockAndScreen conf
+                        { conf with
+                            BlockBit = block_bit
+                            ScreenBit = screen_bit
+                            Score = conf.Score
+                            InputBehavior = TetrisInputBehavior.None
+                        }
+                    else
+                        // Only calculate the input of the state
+                        let t = conf.InputBehaviorTask
+                        let b = if t.IsCompleted then conf.ConvertToTetrisBehavior t.Result else conf.InputBehavior
+                        let bt = if t.IsCompleted then conf.CreateInputTask() else conf.InputBehaviorTask
+                        { conf with
+                            InputBehavior = b
+                            InputBehaviorTask = bt }
+                // Wait until the end of the computation time block after the other calculation is finished
+                let interval = config.IntervalBlockFallTime 4 conf2.Score
+                // output
+                if calc_flag then yield conf2
+                // recursive loop
+                yield! loop conf2 ((stopWatch.ElapsedMilliseconds % interval) = 0L)
+            }
+        loop
+            <| { config with
+                    Region = config.Height + 5
+                    BlockBit = [ for y = 1 to (config.Height + 5) do yield 0 ]
+                    ScreenBit = [ for y = 1 to (config.Height + 4) do yield 0 ]@[0x7FFFFFFF] }
+            <| true
+        |> Seq.map (fun conf ->
+            let f (l:int list) =
+                let arr = Array.ofList l
+                List.ofArray <| arr.[4..(conf.Height + 3)]
+            { conf with
+                BlockBit = f conf.BlockBit
+                ScreenBit = f conf.ScreenBit })

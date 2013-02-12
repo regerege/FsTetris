@@ -4,19 +4,29 @@ open System.Diagnostics
 open System.Threading.Tasks
 
 module Program =
-    let config = new TetrisConfig(null, 60L)
-    let game = new Tetris(config)
-
-    /// キー取得用非同期タスク
+    /// create new key input task
     let getAsyncKeyInput () =
         Async.StartAsTask (async { return System.Console.ReadKey().Key; })
-
-    let mapKey (key : ConsoleKey) =
+    let convertBehavior (key : ConsoleKey) =
         match key with
-        | ConsoleKey.LeftArrow -> -1,0
-        | ConsoleKey.RightArrow -> 1,0
-        | ConsoleKey.DownArrow -> 0,1
-        | _ -> 0,0
+        | ConsoleKey.LeftArrow -> TetrisInputBehavior.Left
+        | ConsoleKey.RightArrow -> TetrisInputBehavior.Right
+        | _ -> TetrisInputBehavior.None
+    /// create new tetris config
+    let getTetrisConfig() : TetrisConfig<ConsoleKey> =
+        {
+            Width = 20
+            Height = 30
+            Region = 0
+            BlockBit = []
+            ScreenBit = []
+            Score = 0L
+            IntervalBlockFallTime = fun _ _ -> 500L
+            InputBehavior = TetrisInputBehavior.None
+            InputBehaviorTask = getAsyncKeyInput()
+            CreateInputTask = getAsyncKeyInput
+            ConvertToTetrisBehavior = convertBehavior
+        }
 
     [<STAThread>]
     [<EntryPoint>]
@@ -25,21 +35,16 @@ module Program =
         Console.Title <- "テトリス？"
         Console.WriteLine "Game Tetris !!"
         Console.WriteLine "If you start the game Tetris Please enter any key."
-//        game.ScreenUpdate.Add(fun bits ->
-//            Console.Clear()
-//            bits |> Seq.iter(fun bit ->
-//                Convert.ToString(bit, 2).PadLeft(20, '0')
-//                |> Seq.map(fun x -> if x = '1' then "■" else "□")
-//                |> Seq.reduce(+)
-//                |> Console.WriteLine))
-//        game.Run()
-        
-        GameTetris.run (ConsoleKey.Escape) getAsyncKeyInput mapKey
-        |> Seq.iter (fun bits ->
+
+        let conf = getTetrisConfig()
+        GameTetris.run conf
+        |> Seq.iter (fun c ->
+            let bits = Seq.zip c.BlockBit c.ScreenBit |> Seq.map (fun (a,b) -> a ||| b) |> Seq.toArray
             Console.Clear()
             bits |> Seq.iter(fun bit ->
-                Convert.ToString(bit, 2).PadLeft(20, '0')
+                Convert.ToString(bit, 2).PadLeft(conf.Width, '0')
                 |> Seq.map(fun x -> if x = '1' then "■" else "□")
                 |> Seq.reduce(+)
                 |> Console.WriteLine))
+
         0
