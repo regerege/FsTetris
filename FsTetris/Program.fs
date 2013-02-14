@@ -12,6 +12,7 @@ module Program =
         | ConsoleKey.LeftArrow -> TetrisInputBehavior.Left
         | ConsoleKey.RightArrow -> TetrisInputBehavior.Right
         | _ -> TetrisInputBehavior.None
+
     /// create new tetris config
     let getTetrisConfig() : TetrisConfig<ConsoleKey> =
         {
@@ -21,7 +22,7 @@ module Program =
             BlockBit = []
             ScreenBit = []
             Score = 0L
-            IntervalBlockFallTime = fun _ _ -> 500L
+            IntervalBlockFallTime = fun _ _ -> 100L
             InputBehavior = TetrisInputBehavior.None
             InputBehaviorTask = getAsyncKeyInput()
             CreateInputTask = getAsyncKeyInput
