@@ -31,6 +31,8 @@ type TetrisInputBehavior =
     | RightTurn
     /// Fall to the block
     | Fall
+    /// Pause the game
+    | Pause
 
 /// All the configuration information of Tetris
 type TetrisConfig<'a> = {
@@ -50,7 +52,7 @@ type TetrisConfig<'a> = {
         /// int : The height of the block wich was extinguished
         /// int64 : current score
         /// int64 : calculation interval time (ms)
-        IntervalBlockFallTime : int -> int64 -> int64
+        IntervalBlockFallTime : int -> int64 -> bool
         /// State value of block behavior
         InputBehavior : TetrisInputBehavior
         /// Current Behavior Task

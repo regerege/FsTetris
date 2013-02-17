@@ -9,8 +9,12 @@ module Program =
         Async.StartAsTask (async { return System.Console.ReadKey().Key; })
     let convertBehavior (key : ConsoleKey) =
         match key with
-        | ConsoleKey.LeftArrow -> TetrisInputBehavior.Left
-        | ConsoleKey.RightArrow -> TetrisInputBehavior.Right
+        | ConsoleKey.LeftArrow -> TetrisInputBehavior.LeftTurn
+        | ConsoleKey.RightArrow -> TetrisInputBehavior.RightTurn
+        | ConsoleKey.S -> TetrisInputBehavior.Left
+        | ConsoleKey.F -> TetrisInputBehavior.Right
+        | ConsoleKey.Spacebar -> TetrisInputBehavior.Fall
+        | ConsoleKey.P -> TetrisInputBehavior.Pause
         | _ -> TetrisInputBehavior.None
 
     /// create new tetris config
@@ -22,7 +26,7 @@ module Program =
             BlockBit = []
             ScreenBit = []
             Score = 0L
-            IntervalBlockFallTime = fun _ _ -> 100L
+            IntervalBlockFallTime = fun _ time -> time % 1000L = 0L
             InputBehavior = TetrisInputBehavior.None
             InputBehaviorTask = getAsyncKeyInput()
             CreateInputTask = getAsyncKeyInput
@@ -38,14 +42,24 @@ module Program =
         Console.WriteLine "If you start the game Tetris Please enter any key."
 
         let conf = getTetrisConfig()
-        GameTetris.run conf
-        |> Seq.iter (fun c ->
-            let bits = Seq.zip c.BlockBit c.ScreenBit |> Seq.map (fun (a,b) -> a ||| b) |> Seq.toArray
-            Console.Clear()
-            bits |> Seq.iter(fun bit ->
-                Convert.ToString(bit, 2).PadLeft(conf.Width, '0')
-                |> Seq.map(fun x -> if x = '1' then "■" else "□")
-                |> Seq.reduce(+)
-                |> Console.WriteLine))
 
+//        GameTetris.run conf
+//        |> Seq.iter (fun c ->
+//            let bits = Seq.zip c.BlockBit c.ScreenBit |> Seq.map (fun (a,b) -> a ||| b) |> Seq.toArray
+//            Console.Clear()
+//            bits |> Seq.iter(fun bit ->
+//                Convert.ToString(bit, 2).PadLeft(conf.Width, '0')
+//                |> Seq.map(fun x -> if x = '1' then "■" else "□")
+//                |> Seq.reduce(+)
+//                |> Console.WriteLine))
+
+        GameTetris.run2 conf
+            |> Seq.iter (fun c ->
+                let bits = Seq.zip c.BlockBit c.ScreenBit |> Seq.map (fun (a,b) -> a ||| b) |> Seq.toArray
+                Console.Clear()
+                bits |> Seq.iter(fun bit ->
+                    Convert.ToString(bit, 2).PadLeft(conf.Width, '0')
+                    |> Seq.map(fun x -> if x = '1' then "■" else "□")
+                    |> Seq.reduce(+)
+                    |> Console.WriteLine))
         0

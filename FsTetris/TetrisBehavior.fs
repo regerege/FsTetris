@@ -2,6 +2,101 @@
 open System.Diagnostics
 
 module TetrisBehavior =
+    let inline private unionBlock (b1, b2) = b1 ||| b2
+    let inline private collisionBlock (b1, b2) = 0 < (b1 &&& b2)
+
+    /// Moving block
+    let moveBlock (conf : TetrisConfig<'a>) =
+        if TetrisBlock.isNullOrEmpty conf.BlockBit then
+            { conf with BlockBit = TetrisBlock.getFallBlock conf.Height }
+        else
+            let s = conf.ScreenBit
+            let b = conf.BlockBit
+            if 0 < b.[b.Length - 2] then
+                { conf with
+                    BlockBit = [ for i = 1 to b.Length do yield 0]
+                    ScreenBit = Seq.zip b s |> Seq.map unionBlock |> Seq.toList }
+            else
+                let b2 = [0]@(b |> Seq.take (b.Length - 1) |> Seq.toList)
+                let checkCollision = Seq.zip b2 s |> Seq.map collisionBlock |> Seq.reduce (||)
+                if checkCollision then
+                    { conf with
+                        BlockBit = [ for i = 1 to b.Length do yield 0 ]
+                        ScreenBit = Seq.zip b s |> Seq.map unionBlock |> Seq.toList }
+                else { conf with BlockBit = b2 }
+
+    /// Navigate to the deepest part of determining the contents of conf
+    let private moveDeepest (conf : TetrisConfig<'a>) =
+        let b = conf.BlockBit
+        let s = conf.ScreenBit
+        let n =
+            b |> Seq.mapi (fun i n -> i,n)
+            |> Seq.filter (snd >> (<)0)
+            |> Seq.map (fun (bi,bn) ->
+                s |> Seq.mapi (fun si sn -> si, bn &&& sn)
+                |> Seq.filter (snd >> (<)0)
+                |> Seq.head
+                |> fun (si,sn) -> si)
+            |> Seq.max
+        let height = b |> Seq.filter ((<)0) |> Seq.length
+        let blank = b |> Seq.findIndex ((<)0)
+        let b2 = b |> Seq.take (b.Length - (n - height - blank)) |> Seq.toList
+        { conf with
+            BlockBit = [ for i = 1 to s.Length do yield 0 ]
+            ScreenBit =
+                [ for i = 1 to (b.Length - b2.Length) do yield 0 ]@b2
+                |> Seq.zip s |> Seq.map unionBlock |> Seq.toList
+        }
+
+// //思いついたら修正
+//    /// Rotation of the block
+//    let rotate (conf : TetrisConfig<'a>) =
+//        let s = conf.ScreenBit
+//        // Remove the blank line, get the Y coordinate of the block
+//        let b,p =
+//            conf.BlockBit
+//            |> Seq.fold (fun (block, pos, inc_flg) line ->
+//                if 0 < line then block@[line] else block
+//                , pos + if inc_flg then 1 else 0
+//                , inc_flg && line = 0) ([],0,true)
+//            |> fun (a,b,_) -> a,b
+//        let hight = b.Length
+//        let width = b |> List.reduce(|||) |> TetrisCommon.bitcount
+//        let diff = max(
+
+    /// Moving block to right
+    let private moveRight (conf : TetrisConfig<'a>) =
+        let s = conf.ScreenBit
+        let b = List.map (fun n -> n >>> 1) conf.BlockBit
+        let notMove =
+            (conf.BlockBit |> Seq.reduce(|||)) &&& 1 = 1
+            || Seq.zip b s |> Seq.map collisionBlock |> Seq.reduce (||)
+        let b2 = if notMove then conf.BlockBit else b
+        { conf with BlockBit = b2 }
+
+    /// Moving block to left
+    let private moveLeft (conf : TetrisConfig<'a>) =
+        let s = conf.ScreenBit
+        let b = List.map (fun n -> n <<< 1) conf.BlockBit
+        let notMove =
+            (conf.BlockBit |> Seq.reduce(|||) >>> (conf.Width - 1)) &&& 1 = 1
+            || Seq.zip b s |> Seq.map collisionBlock |> Seq.reduce (||)
+        let b2 = if notMove then conf.BlockBit else b
+        { conf with BlockBit = b2 }
+
+    /// Mapping of the operation and function
+    let private mapProcessFunc =
+        [
+            TetrisInputBehavior.None, id
+            TetrisInputBehavior.Pause, id
+            TetrisInputBehavior.LeftTurn, id
+            TetrisInputBehavior.RightTurn, id
+
+            TetrisInputBehavior.Fall, moveDeepest
+            TetrisInputBehavior.Right, moveRight
+            TetrisInputBehavior.Left, moveLeft
+        ]
+
     // Converts the instruction Tetris instruction is input.
     let getProcess (conf : TetrisConfig<'a>) =
         let t = conf.InputBehaviorTask
@@ -11,27 +106,14 @@ module TetrisBehavior =
             InputBehavior = b
             InputBehaviorTask = bt }
 
-//    /// Navigate to the deepest part of determining the contents of conf
-//    let moveDeepest (conf : TetrisConfig<'a>) =
-//        if conf.InputBehavior <> TetrisInputBehavior.Fall then conf else
-//        /// 1.ブロックを移動する。
-//        /// 2.スクリーン上のブロックとぶつかるかを判定
-//        /// 3.true なら None (処理を終了し、前回の移動結果を返す)
-//        /// 4.false なら移動結果を返す。
-//        /// アルゴリズムの計算量：　O( distance * height )
-//        Seq.unfold (fun bl ->
-//            [0]@bl |> Seq.tak
-//
-//        let distance =
-//            Seq.zip conf.BlockBit conf.ScreenBit
-//            |> Seq.findIndex (fun (b,s) -> 0 < (b &&& s))
-//            |> fun n -> n - 1
-//        let b =
-//            [ for i = 0 to distance do yield 0 ] @ conf.BlockBit
-//            |> Seq.take distance
-//            |> Seq.toList
-//        let s = Seq.zip b conf.ScreenBit |> Seq.map (fun (b,s) -> b ||| s) |> Seq.toList
-//        { conf with BlockBit = b; ScreenBit = s }
+    /// Calculate the input state
+    let calcProcess (conf : TetrisConfig<'a>) =
+        if TetrisBlock.isNullOrEmpty conf.BlockBit then conf
+        else
+            let conf2 =
+                snd <| List.find (fst >> (=)conf.InputBehavior) mapProcessFunc
+                    <| conf
+            { conf2 with InputBehavior = TetrisInputBehavior.None }
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // 書き直し
