@@ -2,52 +2,70 @@
 open System.Diagnostics
 
 module TetrisBehavior =
-    let inline private unionBlock (b1, b2) = b1 ||| b2
-    let inline private collisionBlock (b1, b2) = 0 < (b1 &&& b2)
+    /// or for the tuple
+    let inline private union (b1, b2) = b1 ||| b2
+    /// and for the tuple
+    let inline private collision (b1, b2) = b1 &&& b2
+    /// Disjunction between the list
+    let private unionBlock (a : int list) (b : int list) =
+        Seq.zip a b |> Seq.map union |> Seq.toList
+    /// Disjunction AND between the list
+    let private collisionBlock (a : int list) (b : int list) =
+        Seq.zip a b |> Seq.map collision |> Seq.toList
+
+    /// Create an empty block
+    let private createBlankBlock (height : int) = [ for i = 1 to height do yield 0 ]
+    
+    /// Check collision
+    let private checkCollisionBit (a : int list) (b : int list) =
+        Seq.zip a b
+        |> Seq.map collision
+        |> Seq.exists ((<)0)
+    /// Check not collision
+    let private checkCollision (conf : TetrisConfig<'a>) =
+        checkCollisionBit conf.BlockBit conf.ScreenBit
+
+    /// Calculation Move after block
+    let private calcMoveBlock (n : int) (block : int list) =
+        if block.Length < (abs n) then block
+        elif 0 < n then
+            [ for i = 1 to n do yield 0]@(block |> Seq.take (block.Length - n) |> Seq.toList)
+        elif n < 0 then
+            let n = abs n
+            (block |> Seq.skip n |> Seq.toList)@[ for i = 1 to n do yield 0]
+        else block
+        
+    /// Moving Block Sequence
+    let private seqMoveBlock (conf : TetrisConfig<'a>) =
+        Seq.unfold (fun b -> Some (b,calcMoveBlock 1 b)) conf.BlockBit
 
     /// Moving block
     let moveBlock (conf : TetrisConfig<'a>) =
         if TetrisBlock.isNullOrEmpty conf.BlockBit then
             { conf with BlockBit = TetrisBlock.getFallBlock conf.Height }
         else
+            let b = seqMoveBlock conf |> Seq.nth 1
             let s = conf.ScreenBit
-            let b = conf.BlockBit
-            if 0 < b.[b.Length - 2] then
-                { conf with
-                    BlockBit = [ for i = 1 to b.Length do yield 0]
-                    ScreenBit = Seq.zip b s |> Seq.map unionBlock |> Seq.toList }
+            if collisionBlock b s |> Seq.forall ((=)0) then
+                { conf with BlockBit = b }
             else
-                let b2 = [0]@(b |> Seq.take (b.Length - 1) |> Seq.toList)
-                let checkCollision = Seq.zip b2 s |> Seq.map collisionBlock |> Seq.reduce (||)
-                if checkCollision then
-                    { conf with
-                        BlockBit = [ for i = 1 to b.Length do yield 0 ]
-                        ScreenBit = Seq.zip b s |> Seq.map unionBlock |> Seq.toList }
-                else { conf with BlockBit = b2 }
+                { conf with
+                    BlockBit = createBlankBlock s.Length
+                    ScreenBit = unionBlock conf.BlockBit s }
 
     /// Navigate to the deepest part of determining the contents of conf
     let private moveDeepest (conf : TetrisConfig<'a>) =
-        let b = conf.BlockBit
         let s = conf.ScreenBit
-        let n =
-            b |> Seq.mapi (fun i n -> i,n)
-            |> Seq.filter (snd >> (<)0)
-            |> Seq.map (fun (bi,bn) ->
-                s |> Seq.mapi (fun si sn -> si, bn &&& sn)
-                |> Seq.filter (snd >> (<)0)
-                |> Seq.head
-                |> fun (si,sn) -> si)
-            |> Seq.max
-        let height = b |> Seq.filter ((<)0) |> Seq.length
-        let blank = b |> Seq.findIndex ((<)0)
-        let b2 = b |> Seq.take (b.Length - (n - height - blank)) |> Seq.toList
+        let b =
+            seqMoveBlock conf
+            |> Seq.scan (fun (a,b) bit -> b,bit) ([],[])
+            |> Seq.skipWhile (snd >> (=)[])
+            |> Seq.find (snd >> checkCollisionBit s)
+            |> fst
         { conf with
-            BlockBit = [ for i = 1 to s.Length do yield 0 ]
-            ScreenBit =
-                [ for i = 1 to (b.Length - b2.Length) do yield 0 ]@b2
-                |> Seq.zip s |> Seq.map unionBlock |> Seq.toList
-        }
-
+            BlockBit = createBlankBlock s.Length
+            ScreenBit = unionBlock b s }
+        
 // //思いついたら修正
 //    /// Rotation of the block
 //    let rotate (conf : TetrisConfig<'a>) =
@@ -70,7 +88,7 @@ module TetrisBehavior =
         let b = List.map (fun n -> n >>> 1) conf.BlockBit
         let notMove =
             (conf.BlockBit |> Seq.reduce(|||)) &&& 1 = 1
-            || Seq.zip b s |> Seq.map collisionBlock |> Seq.reduce (||)
+            || Seq.zip b s |> Seq.map (collision >> (<)0) |> Seq.reduce (||)
         let b2 = if notMove then conf.BlockBit else b
         { conf with BlockBit = b2 }
 
@@ -80,7 +98,7 @@ module TetrisBehavior =
         let b = List.map (fun n -> n <<< 1) conf.BlockBit
         let notMove =
             (conf.BlockBit |> Seq.reduce(|||) >>> (conf.Width - 1)) &&& 1 = 1
-            || Seq.zip b s |> Seq.map collisionBlock |> Seq.reduce (||)
+            || Seq.zip b s |> Seq.map (collision >> (<)0) |> Seq.reduce (||)
         let b2 = if notMove then conf.BlockBit else b
         { conf with BlockBit = b2 }
 

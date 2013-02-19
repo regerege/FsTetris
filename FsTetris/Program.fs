@@ -42,18 +42,7 @@ module Program =
         Console.WriteLine "If you start the game Tetris Please enter any key."
 
         let conf = getTetrisConfig()
-
-//        GameTetris.run conf
-//        |> Seq.iter (fun c ->
-//            let bits = Seq.zip c.BlockBit c.ScreenBit |> Seq.map (fun (a,b) -> a ||| b) |> Seq.toArray
-//            Console.Clear()
-//            bits |> Seq.iter(fun bit ->
-//                Convert.ToString(bit, 2).PadLeft(conf.Width, '0')
-//                |> Seq.map(fun x -> if x = '1' then "■" else "□")
-//                |> Seq.reduce(+)
-//                |> Console.WriteLine))
-
-        GameTetris.run2 conf
+        GameTetris.run conf
             |> Seq.iter (fun c ->
                 let bits = Seq.zip c.BlockBit c.ScreenBit |> Seq.map (fun (a,b) -> a ||| b) |> Seq.toArray
                 Console.Clear()
