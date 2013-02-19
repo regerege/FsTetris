@@ -15,6 +15,7 @@ open System.Threading.Tasks
 ・動作処理後の初期入力動作（入力情報がない場合の初期値）
 ・入力を受け取るための関数ポインタ (とりあえず Task<'a> で受け取れる形と限定する。)
 ・独自入力値をTetrisInputBehaviorに変換する関数ポインタ
+・TODO: Name Entry (まさぶろうさん希望機能)
 *)
 
 /// Behavior definition of Tetris
@@ -40,6 +41,8 @@ type TetrisConfig<'a> = {
         Width : int
         /// Screen Height
         Height : int
+        /// Screen Center Position
+        CenterPos : int
         /// Screen region
         Region : int
         /// Fall Block
@@ -52,7 +55,7 @@ type TetrisConfig<'a> = {
         /// int : The height of the block wich was extinguished
         /// int64 : current score
         /// int64 : calculation interval time (ms)
-        IntervalBlockFallTime : int -> int64 -> bool
+        IntervalBlockFallTime : int -> int64 -> int64 -> bool
         /// State value of block behavior
         InputBehavior : TetrisInputBehavior
         /// Current Behavior Task

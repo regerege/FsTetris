@@ -20,13 +20,14 @@ module GameTetris =
         seq {
             let conf2 = TetrisBehavior.getProcess conf              // input
             if conf2.InputBehavior <> TetrisInputBehavior.Pause then
+                // Disappearance of the calculation screen block
+                let confDisappearance,extinguishedBlock = TetrisBehavior.extinctionBlock conf2
                 // exec of the input behavior
-                let confProcess = TetrisBehavior.calcProcess conf2
+                let confProcess = TetrisBehavior.calcProcess confDisappearance
                 // Drawn immediately after the behavior
                 if sw.ElapsedMilliseconds % 60L = 0L then yield confProcess
                 // Calculation and drawing fall
-                // TODO: -1の数値を消滅ブロックの段差に変える
-                if conf.IntervalBlockFallTime -1 sw.ElapsedMilliseconds then
+                if conf.IntervalBlockFallTime extinguishedBlock confProcess.Score sw.ElapsedMilliseconds then
                     let confMoved = TetrisBehavior.moveBlock confProcess
                     yield confMoved
                     yield! fspLoop sw confMoved
@@ -43,6 +44,7 @@ module GameTetris =
         // game start
         fspLoop stopWatch
             <| { config with
+                    CenterPos = (config.Width * 10 / 2 + 5) / 10
                     Region = config.Height + 5
                     BlockBit = [ for y = 1 to (config.Height + 5) do yield 0 ]
                     ScreenBit = [ for y = 1 to (config.Height + 4) do yield 0 ]@[0xFFFFFFFF] }

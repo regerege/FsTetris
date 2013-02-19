@@ -2,6 +2,9 @@
 open System.Diagnostics
 
 module TetrisBehavior =
+    /// 
+    let isNullOrEmpty (block : int list) = block = [] || block |> Seq.forall ((=)0)
+
     /// or for the tuple
     let inline private union (b1, b2) = b1 ||| b2
     /// and for the tuple
@@ -21,6 +24,7 @@ module TetrisBehavior =
         Seq.zip a b
         |> Seq.map collision
         |> Seq.exists ((<)0)
+
     /// Check not collision
     let private checkCollision (conf : TetrisConfig<'a>) =
         checkCollisionBit conf.BlockBit conf.ScreenBit
@@ -41,7 +45,7 @@ module TetrisBehavior =
 
     /// Moving block
     let moveBlock (conf : TetrisConfig<'a>) =
-        if TetrisBlock.isNullOrEmpty conf.BlockBit then
+        if isNullOrEmpty conf.BlockBit then
             { conf with BlockBit = TetrisBlock.getFallBlock conf.Height }
         else
             let b = seqMoveBlock conf |> Seq.nth 1
@@ -126,51 +130,27 @@ module TetrisBehavior =
 
     /// Calculate the input state
     let calcProcess (conf : TetrisConfig<'a>) =
-        if TetrisBlock.isNullOrEmpty conf.BlockBit then conf
+        if isNullOrEmpty conf.BlockBit then conf
         else
             let conf2 =
                 snd <| List.find (fst >> (=)conf.InputBehavior) mapProcessFunc
                     <| conf
             { conf2 with InputBehavior = TetrisInputBehavior.None }
 
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// 書き直し
-    /// calculation of input behavior
-    let behaviorBlock (block : int list) (behavior : TetrisInputBehavior) =
-        let op_lr =
-            match behavior with
-            | TetrisInputBehavior.Left -> fun a b -> b <<< a
-            | TetrisInputBehavior.Right -> fun a b -> b >>> a
-            | _ -> (*)
-        List.map (op_lr 1) block
-
-    /// calculation of block and screen
-    let calcBehaviorOnBlockAndScreen (conf : TetrisConfig<'a>) =
-        let block = TetrisBlock.getFallBlock conf.Height
-        // block of state after the movement
-        let mb =
-            if conf.BlockBit |> Seq.forall ((=)0) then
-                block
-            else
-                let block = behaviorBlock conf.BlockBit conf.InputBehavior
-                [0]@block |> Seq.take (conf.Region) |> Seq.toList
-        // Whether movement
-        let wm =
-            Seq.zip mb conf.ScreenBit
-            |> Seq.map (fun (a,b) -> a &&& b)
-            |> Seq.forall ((=)0)
-        // if non-movement to the screen
-        let sb =
-            if wm then conf.ScreenBit
-            else
-                Seq.zip conf.BlockBit conf.ScreenBit
-                |> Seq.map (fun (a,b) -> a ||| b)
+    let extinctionBlock (conf : TetrisConfig<'a>) =
+        let s = conf.ScreenBit
+        if isNullOrEmpty s then conf,0
+        else
+            // Gets the row other than the target disappearance.
+            let s2 =
+                s |> Seq.take (s.Length - 1)
+                |> Seq.filter (TetrisCommon.bitcount >> (>)conf.Width)
                 |> Seq.toList
-        { conf with
-            BlockBit = (if wm then mb else block)
-            ScreenBit = sb
-            Score = conf.Score
-            InputBehavior = TetrisInputBehavior.None
-        }
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            let len = s.Length - s2.Length - 1
+            if 0 < len then
+                let sc = Array.create len 100L |> Seq.reduce (*)
+                { conf with
+                    Score = conf.Score + sc
+                    ScreenBit = [for i = 1 to len do yield 0]@s2@[0xFFFFFFFF] },len
+            else conf,0
 

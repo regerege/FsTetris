@@ -22,11 +22,12 @@ module Program =
         {
             Width = 20
             Height = 30
+            CenterPos = 0
             Region = 0
             BlockBit = []
             ScreenBit = []
             Score = 0L
-            IntervalBlockFallTime = fun _ time -> time % 1000L = 0L
+            IntervalBlockFallTime = fun _ _ time -> time % 500L = 0L
             InputBehavior = TetrisInputBehavior.None
             InputBehaviorTask = getAsyncKeyInput()
             CreateInputTask = getAsyncKeyInput
@@ -37,7 +38,7 @@ module Program =
     [<EntryPoint>]
     let Main (_) =
         Console.CursorVisible <- false
-        Console.Title <- "テトリス？"
+        Console.Title <- "Tetris Game!!"
         Console.WriteLine "Game Tetris !!"
         Console.WriteLine "If you start the game Tetris Please enter any key."
 
@@ -46,9 +47,17 @@ module Program =
             |> Seq.iter (fun c ->
                 let bits = Seq.zip c.BlockBit c.ScreenBit |> Seq.map (fun (a,b) -> a ||| b) |> Seq.toArray
                 Console.Clear()
+
+                // Output of the Score
+                Console.WriteLine(String.Format("Score: {0:#,##0}", c.Score))
+                Console.WriteLine()
+
+                // Output of the Block
                 bits |> Seq.iter(fun bit ->
                     Convert.ToString(bit, 2).PadLeft(conf.Width, '0')
                     |> Seq.map(fun x -> if x = '1' then "■" else "□")
                     |> Seq.reduce(+)
+                    |> fun s -> s + (new System.String(' ', 20))
                     |> Console.WriteLine))
         0
+

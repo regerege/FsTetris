@@ -42,21 +42,12 @@ module TetrisBlock =
         [ 0b00000000011000000000; 0b00000000010000000000; 0b00000000011000000000; ]
     ]
 
-//    let _random = new System.Security.Cryptography.RNGCryptoServiceProvider()
-    let inline private rand max =
-//        let mutable b = [| 0uy |]
-//        _random.GetBytes(b)
-        let a = System.DateTime.Now.Millisecond
-//        let r = new System.Random(int b.[0])
-        let r = new System.Random()
-        r.Next(0, max)
-
+    /// TODO: ブロックをどのX座標で落とすかを計算する。
     let getFallBlock height =
-        let r = rand <| FallBlocks.Length
-        let b = FallBlocks.[r]
+        let rnd = new System.Random()
+        let b = FallBlocks.[rnd.Next(0, FallBlocks.Length)]
         let l = b.Length
         List.append
             <| [ for y = 1 to (4-l) do yield 0 ]@b
             <| [ for y = 0 to height do yield 0]
 
-    let isNullOrEmpty (block : int list) = block = [] || block |> Seq.forall ((=)0)
