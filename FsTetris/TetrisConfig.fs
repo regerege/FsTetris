@@ -35,16 +35,27 @@ type TetrisInputBehavior =
     /// Pause the game
     | Pause
 
+/// Fall Block Config
+type TetrisBlockConfig =
+    {
+        /// The index within the block
+        BlockIndex : int
+        /// Group of the Fall Block
+        BlockGroup : int list list
+        /// Position from the top
+        TopPos : int
+        /// Position from the right
+        RightPos : int
+    }
+
 /// All the configuration information of Tetris
 type TetrisConfig<'a> = {
         /// Screen Width
         Width : int
         /// Screen Height
         Height : int
-        /// Screen Center Position
-        CenterPos : int
-        /// Screen region
-        Region : int
+        /// Block Config
+        BlockConfig : TetrisBlockConfig
         /// Fall Block
         BlockBit : int list
         /// Screen
@@ -65,3 +76,20 @@ type TetrisConfig<'a> = {
         /// Tetris behavior converted for a custom behavior
         ConvertToTetrisBehavior : 'a -> TetrisInputBehavior
     }
+
+type TetrisRunConfig<'a> = {
+        /// Screen Width
+        Width : int
+        /// Screen Height
+        Height : int
+        /// Interval calculation of the block fall
+        /// int : The height of the block wich was extinguished
+        /// int64 : current score
+        /// int64 : calculation interval time (ms)
+        IntervalBlockFallTime : int -> int64 -> int64 -> bool
+        /// Create new Task for custom behavior
+        CreateInputTask : unit -> Task<'a>
+        /// Tetris behavior converted for a custom behavior
+        ConvertToTetrisBehavior : 'a -> TetrisInputBehavior
+    }
+

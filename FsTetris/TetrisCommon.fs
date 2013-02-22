@@ -9,3 +9,11 @@ module TetrisCommon =
         let d = (c &&& 0x00FF00FF) + (c >>> 8 &&& 0x00FF00FF) in
         (d &&& 0x0000FFFF) + (d >>> 16 &&& 0x0000FFFF)
 
+    /// Count the number of Zeros from the end.
+    let getRightZeroCount (bit:int) =
+        if bit = 0 then 0
+        else
+            let rec find n c =
+                if n &&& 1 = 1 then c
+                else find (n >>> 1) (c+1)
+            find bit 0

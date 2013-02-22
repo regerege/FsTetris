@@ -37,17 +37,28 @@ module GameTetris =
                 yield! fspLoop sw conf2                 // recursion loop
         }
 
+    let private convertConfig (config : TetrisRunConfig<'a>) : TetrisConfig<'a> =
+        {
+            Width = config.Width
+            Height = config.Height
+//            Region = config.Height + 5
+            BlockConfig = { BlockIndex = 0; TopPos = 0; RightPos = 0; BlockGroup = []; }
+            BlockBit = [ for y = 1 to (config.Height + 5) do yield 0 ]
+            ScreenBit = [ for y = 1 to (config.Height + 4) do yield 0 ]@[0xFFFFFFFF]
+            Score = 0L
+            IntervalBlockFallTime = fun _ _ time -> time % 500L = 0L
+            InputBehavior = TetrisInputBehavior.None
+            InputBehaviorTask = config.CreateInputTask()
+            CreateInputTask = config.CreateInputTask
+            ConvertToTetrisBehavior = config.ConvertToTetrisBehavior
+        }
+
     /// Running of Tetris Game
-    let run (config : TetrisConfig<'a>) =
+    let run (config : TetrisRunConfig<'a>) =
         let stopWatch = new Stopwatch()
         stopWatch.Start()
         // game start
-        fspLoop stopWatch
-            <| { config with
-                    CenterPos = (config.Width * 10 / 2 + 5) / 10
-                    Region = config.Height + 5
-                    BlockBit = [ for y = 1 to (config.Height + 5) do yield 0 ]
-                    ScreenBit = [ for y = 1 to (config.Height + 4) do yield 0 ]@[0xFFFFFFFF] }
+        fspLoop stopWatch <| convertConfig config
         // Output up to boundary
         |> Seq.map (fun conf ->
             let f (l:int list) =
@@ -56,3 +67,4 @@ module GameTetris =
             { conf with
                 BlockBit = f conf.BlockBit
                 ScreenBit = f conf.ScreenBit })
+

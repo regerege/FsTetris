@@ -46,7 +46,7 @@ module TetrisBehavior =
     /// Moving block
     let moveBlock (conf : TetrisConfig<'a>) =
         if isNullOrEmpty conf.BlockBit then
-            { conf with BlockBit = TetrisBlock.getFallBlock conf.Height }
+            TetrisBlock.getFallBlock conf
         else
             let b = seqMoveBlock conf |> Seq.nth 1
             let s = conf.ScreenBit
@@ -70,21 +70,24 @@ module TetrisBehavior =
             BlockBit = createBlankBlock s.Length
             ScreenBit = unionBlock b s }
         
-// //思いついたら修正
-//    /// Rotation of the block
-//    let rotate (conf : TetrisConfig<'a>) =
-//        let s = conf.ScreenBit
-//        // Remove the blank line, get the Y coordinate of the block
-//        let b,p =
-//            conf.BlockBit
-//            |> Seq.fold (fun (block, pos, inc_flg) line ->
-//                if 0 < line then block@[line] else block
-//                , pos + if inc_flg then 1 else 0
-//                , inc_flg && line = 0) ([],0,true)
-//            |> fun (a,b,_) -> a,b
-//        let hight = b.Length
-//        let width = b |> List.reduce(|||) |> TetrisCommon.bitcount
-//        let diff = max(
+ //思いついたら修正
+    /// Rotation of the block
+    let rotate (conf : TetrisConfig<'a>) =
+        // Calculated at the time of block rotation removes the unwanted zero.
+        let b = conf.BlockBit |> Seq.filter ((<)0) |> Seq.toList
+        let rightZeroCount =
+            b |> Seq.map TetrisCommon.getRightZeroCount
+            |> Seq.min
+        let b2 = b |> List.map (fun n -> n >>> rightZeroCount)
+        let topZeroCount = conf.BlockBit |> Seq.takeWhile ((=)0) |> Seq.length
+        let height = b.Length
+        let width = b2 |> Seq.map TetrisCommon.bitcount |> Seq.max
+
+        if conf.InputBehavior = TetrisInputBehavior.LeftTurn then
+            conf
+        elif conf.InputBehavior = TetrisInputBehavior.RightTurn then
+            conf
+        else conf
 
     /// Moving block to right
     let private moveRight (conf : TetrisConfig<'a>) =
@@ -113,7 +116,6 @@ module TetrisBehavior =
             TetrisInputBehavior.Pause, id
             TetrisInputBehavior.LeftTurn, id
             TetrisInputBehavior.RightTurn, id
-
             TetrisInputBehavior.Fall, moveDeepest
             TetrisInputBehavior.Right, moveRight
             TetrisInputBehavior.Left, moveLeft

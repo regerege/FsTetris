@@ -17,19 +17,28 @@ module Program =
         | ConsoleKey.P -> TetrisInputBehavior.Pause
         | _ -> TetrisInputBehavior.None
 
+//    /// create new tetris config
+//    let getTetrisConfig() : TetrisConfig<ConsoleKey> =
+//        {
+//            Width = 20
+//            Height = 30
+//            CenterPos = 0
+//            Region = 0
+//            BlockBit = []
+//            ScreenBit = []
+//            Score = 0L
+//            IntervalBlockFallTime = fun _ _ time -> time % 500L = 0L
+//            InputBehavior = TetrisInputBehavior.None
+//            InputBehaviorTask = getAsyncKeyInput()
+//            CreateInputTask = getAsyncKeyInput
+//            ConvertToTetrisBehavior = convertBehavior
+//        }
     /// create new tetris config
-    let getTetrisConfig() : TetrisConfig<ConsoleKey> =
+    let getTetrisConfig() : TetrisRunConfig<ConsoleKey> =
         {
             Width = 20
             Height = 30
-            CenterPos = 0
-            Region = 0
-            BlockBit = []
-            ScreenBit = []
-            Score = 0L
             IntervalBlockFallTime = fun _ _ time -> time % 500L = 0L
-            InputBehavior = TetrisInputBehavior.None
-            InputBehaviorTask = getAsyncKeyInput()
             CreateInputTask = getAsyncKeyInput
             ConvertToTetrisBehavior = convertBehavior
         }
@@ -38,7 +47,7 @@ module Program =
     [<EntryPoint>]
     let Main (_) =
         Console.CursorVisible <- false
-        Console.Title <- "Tetris Game!!"
+        Console.Title <- "Retris!!"
         Console.WriteLine "Game Tetris !!"
         Console.WriteLine "If you start the game Tetris Please enter any key."
 
@@ -57,7 +66,6 @@ module Program =
                     Convert.ToString(bit, 2).PadLeft(conf.Width, '0')
                     |> Seq.map(fun x -> if x = '1' then "■" else "□")
                     |> Seq.reduce(+)
-                    |> fun s -> s + (new System.String(' ', 20))
                     |> Console.WriteLine))
         0
 
