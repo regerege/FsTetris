@@ -106,7 +106,7 @@ module TetrisBehavior =
                 1 <= (block |> Seq.reduce(|||) >>> (conf.Width - 1))
                 || Seq.zip block s |> Seq.map (collision >> (<)0) |> Seq.reduce (||)
 
-            if checkCollisionBit block s || notMoveRight || notMoveLeft then
+            if checkCollisionBit block s || notMoveRight || notMoveLeft || conf.BlockBit = block then
                 conf
             else
                 { conf with
