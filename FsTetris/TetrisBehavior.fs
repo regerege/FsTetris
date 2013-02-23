@@ -40,6 +40,7 @@ module TetrisBehavior =
         else block
         
     /// Moving Block Sequence
+    /// ** You need to  make sure the settings for "BlockCOnfig.TopPos" when you call.
     let private seqMoveBlock (conf : TetrisConfig<'a>) =
         Seq.unfold (fun b -> Some (b,calcMoveBlock 1 b)) conf.BlockBit
 
@@ -51,7 +52,9 @@ module TetrisBehavior =
             let b = seqMoveBlock conf |> Seq.nth 1
             let s = conf.ScreenBit
             if collisionBlock b s |> Seq.forall ((=)0) then
-                { conf with BlockBit = b }
+                { conf with
+                    BlockConfig = { conf.BlockConfig with TopPos = conf.BlockConfig.TopPos + 1 }
+                    BlockBit = b }
             else
                 { conf with
                     BlockBit = createBlankBlock s.Length
@@ -67,27 +70,52 @@ module TetrisBehavior =
             |> Seq.find (snd >> checkCollisionBit s)
             |> fst
         { conf with
+//            BlockConfig = { conf.BlockConfig with *** }  // No need to create a new block
             BlockBit = createBlankBlock s.Length
             ScreenBit = unionBlock b s }
-        
- //思いついたら修正
+
     /// Rotation of the block
     let rotate (conf : TetrisConfig<'a>) =
-        // Calculated at the time of block rotation removes the unwanted zero.
-        let b = conf.BlockBit |> Seq.filter ((<)0) |> Seq.toList
-        let rightZeroCount =
-            b |> Seq.map TetrisCommon.getRightZeroCount
-            |> Seq.min
-        let b2 = b |> List.map (fun n -> n >>> rightZeroCount)
-        let topZeroCount = conf.BlockBit |> Seq.takeWhile ((=)0) |> Seq.length
-        let height = b.Length
-        let width = b2 |> Seq.map TetrisCommon.bitcount |> Seq.max
+        let op = if conf.InputBehavior = TetrisInputBehavior.LeftTurn then (-) else (+)
+        let ob = conf.BlockBit |> List.filter ((<)0)
+        let bc = conf.BlockConfig
+        let bg = bc.BlockGroup
+        let bi = bc.BlockIndex
+        let index = TetrisBlock.calcTurnFuncs.[bg.Length] bi op
+        if bi = index then conf
+        else
+            let s = conf.ScreenBit
+            let b = bg.[index]
+            let rbw,obw =
+                b |> Seq.map TetrisCommon.bitcount |> Seq.max
+                , ob |> Seq.map TetrisCommon.bitcount |> Seq.max
+            let th = bc.TopPos + ob.Length - b.Length
+            let bh = conf.Height + 5 - b.Length - th
 
-        if conf.InputBehavior = TetrisInputBehavior.LeftTurn then
-            conf
-        elif conf.InputBehavior = TetrisInputBehavior.RightTurn then
-            conf
-        else conf
+            let tblock,bblock = [ for y = 1 to th do yield 0 ], [ for y = 1 to bh do yield 0 ]
+            let right = bc.RightPos + rbw - obw
+            let rb = b |> List.map (fun bit -> bit <<< right)
+            let block = tblock@rb@bblock
+            let notMoveRight =
+                (block |> Seq.reduce(|||)) &&& 1 = 1
+                || Seq.zip block s |> Seq.map (collision >> (<)0) |> Seq.reduce (||)
+            let notMoveLeft =
+                1 <= (block |> Seq.reduce(|||) >>> (conf.Width - 1))
+                || Seq.zip block s |> Seq.map (collision >> (<)0) |> Seq.reduce (||)
+
+            if checkCollisionBit block s || notMoveRight || notMoveLeft then
+                conf
+            else
+                { conf with
+                    BlockConfig =
+                        {
+                            bc with
+                                BlockIndex = index
+                                TopPos = th
+                                RightPos = right
+                        }
+                    BlockBit = block
+                }
 
     /// Moving block to right
     let private moveRight (conf : TetrisConfig<'a>) =
@@ -97,7 +125,9 @@ module TetrisBehavior =
             (conf.BlockBit |> Seq.reduce(|||)) &&& 1 = 1
             || Seq.zip b s |> Seq.map (collision >> (<)0) |> Seq.reduce (||)
         let b2 = if notMove then conf.BlockBit else b
-        { conf with BlockBit = b2 }
+        { conf with
+            BlockConfig = { conf.BlockConfig with RightPos = conf.BlockConfig.RightPos - 1 }
+            BlockBit = b2 }
 
     /// Moving block to left
     let private moveLeft (conf : TetrisConfig<'a>) =
@@ -107,15 +137,17 @@ module TetrisBehavior =
             (conf.BlockBit |> Seq.reduce(|||) >>> (conf.Width - 1)) &&& 1 = 1
             || Seq.zip b s |> Seq.map (collision >> (<)0) |> Seq.reduce (||)
         let b2 = if notMove then conf.BlockBit else b
-        { conf with BlockBit = b2 }
+        { conf with
+            BlockConfig = { conf.BlockConfig with RightPos = conf.BlockConfig.RightPos + 1 }
+            BlockBit = b2 }
 
     /// Mapping of the operation and function
     let private mapProcessFunc =
         [
             TetrisInputBehavior.None, id
             TetrisInputBehavior.Pause, id
-            TetrisInputBehavior.LeftTurn, id
-            TetrisInputBehavior.RightTurn, id
+            TetrisInputBehavior.LeftTurn, rotate
+            TetrisInputBehavior.RightTurn, rotate
             TetrisInputBehavior.Fall, moveDeepest
             TetrisInputBehavior.Right, moveRight
             TetrisInputBehavior.Left, moveLeft
@@ -139,6 +171,7 @@ module TetrisBehavior =
                     <| conf
             { conf2 with InputBehavior = TetrisInputBehavior.None }
 
+    /// Annihilation of the block determines
     let extinctionBlock (conf : TetrisConfig<'a>) =
         let s = conf.ScreenBit
         if isNullOrEmpty s then conf,0

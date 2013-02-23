@@ -69,9 +69,6 @@ module TetrisBlock =
             fun x op -> ((op x 1)%4) &&& 0b11
         ]
 
-    let deleteMargin (conf : TetrisConfig<'a>) =
-        1
-
     let getFallBlock (conf : TetrisConfig<'a>) =
         let rnd = new System.Random()
         let bgi = rnd.Next(0, FallBlocks.Length)        // BlockGroup Index
@@ -91,7 +88,13 @@ module TetrisBlock =
                     BlockIndex = bi
                     BlockGroup = b1
                     TopPos = block |> Seq.takeWhile ((=)0) |> Seq.length
-                    RightPos = block |> Seq.map TetrisCommon.getRightZeroCount |> Seq.min
+                    RightPos =
+                        if block |> Seq.forall ((=)0) then 0
+                        else
+                            block
+                            |> Seq.filter ((<)0)
+                            |> Seq.map TetrisCommon.getRightZeroCount
+                            |> Seq.min
                 }
             BlockBit = block }
 
