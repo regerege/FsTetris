@@ -94,7 +94,10 @@ module TetrisBehavior =
 
             let tblock,bblock = [ for y = 1 to th do yield 0 ], [ for y = 1 to bh do yield 0 ]
             let right = bc.RightPos + rbw - obw
-            let rb = b |> List.map (fun bit -> bit <<< right)
+            let rb =
+                if right < 0 then b
+                else
+                    b |> List.map (fun bit -> bit <<< (if conf.Width < (rbw + right) then conf.Width - rbw else right))
             let block = tblock@rb@bblock
             let notMoveRight =
                 (block |> Seq.reduce(|||)) &&& 1 = 1
