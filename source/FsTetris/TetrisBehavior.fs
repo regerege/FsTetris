@@ -49,7 +49,7 @@ module TetrisBehavior =
         if isNullOrEmpty conf.BlockBit then
             TetrisBlock.getFallBlock conf
         else
-            let b = seqMoveBlock conf |> Seq.nth 1
+            let b = seqMoveBlock conf |> Seq.item 1
             let s = conf.ScreenBit
             if collisionBlock b s |> Seq.forall ((=)0) then
                 { conf with
