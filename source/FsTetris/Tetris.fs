@@ -37,7 +37,7 @@ module GameTetris =
                 yield! fspLoop sw conf2                 // recursion loop
         }
 
-    let private convertConfig (config : TetrisRunConfig<'a>) : TetrisConfig<'a> =
+    let public convertConfig (config : TetrisRunConfig<'a>) : TetrisConfig<'a> =
         {
             Width = config.Width
             Height = config.Height
