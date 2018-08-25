@@ -1,5 +1,4 @@
 ﻿namespace FsTetris
-open System
 open System.Threading.Tasks
 
 (*
@@ -13,8 +12,7 @@ open System.Threading.Tasks
 ・ブロックの落下計算間隔計算関数ポインタ（点数から速度を計算する）
 ・現在の入力動作　（入力情報）
 ・動作処理後の初期入力動作（入力情報がない場合の初期値）
-・入力を受け取るための関数ポインタ (とりあえず Task<'a> で受け取れる形と限定する。)
-・独自入力値をTetrisInputBehaviorに変換する関数ポインタ
+・入力を受け取るための関数ポインタ (Task で受け取れる形と限定する。)
 ・TODO: Name Entry (まさぶろうさん希望機能)
 *)
 
@@ -51,7 +49,7 @@ type TetrisBlockConfig =
 /// All the configuration information of Tetris
 [<NoComparison>]
 [<NoEquality>]
-type TetrisConfig<'a> = {
+type TetrisConfig = {
         /// Screen Width
         Width : int
         /// Screen Height
@@ -72,16 +70,14 @@ type TetrisConfig<'a> = {
         /// State value of block behavior
         InputBehavior : TetrisInputBehavior
         /// Current Behavior Task
-        InputBehaviorTask : Task<'a>
+        InputBehaviorTask : Task<TetrisInputBehavior>
         /// Create new Task for custom behavior
-        CreateInputTask : unit -> Task<'a>
-        /// Tetris behavior converted for a custom behavior
-        ConvertToTetrisBehavior : 'a -> TetrisInputBehavior
+        CreateInputTask : unit -> Task<TetrisInputBehavior>
     }
 
 [<NoComparison>]
 [<NoEquality>]
-type TetrisRunConfig<'a> = {
+type TetrisRunConfig = {
         /// Screen Width
         Width : int
         /// Screen Height
@@ -92,7 +88,5 @@ type TetrisRunConfig<'a> = {
         /// int64 : calculation interval time (ms)
         IntervalBlockFallTime : int -> int64 -> int64 -> bool
         /// Create new Task for custom behavior
-        CreateInputTask : unit -> Task<'a>
-        /// Tetris behavior converted for a custom behavior
-        ConvertToTetrisBehavior : 'a -> TetrisInputBehavior
+        CreateInputTask : unit -> Task<TetrisInputBehavior>
     }

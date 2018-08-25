@@ -1,6 +1,5 @@
 ﻿namespace FsTetris
 open System.Diagnostics
-open TetrisBehavior
 
 /// Tetris
 module GameTetris =
@@ -16,7 +15,7 @@ module GameTetris =
     /// Stopwatch が停止時はゲームも停止する。
     /// ゲームの終了判定を定める。
     /// 
-    let rec private fspLoop (sw : Stopwatch)  (conf : TetrisConfig<'a>) =
+    let rec private fspLoop (sw : Stopwatch)  (conf : TetrisConfig) =
         seq {
             let conf2 = TetrisBehavior.getProcess conf              // input
             if conf2.InputBehavior <> TetrisInputBehavior.Pause then
@@ -37,7 +36,7 @@ module GameTetris =
                 yield! fspLoop sw conf2                 // recursion loop
         }
 
-    let public convertConfig (config : TetrisRunConfig<'a>) : TetrisConfig<'a> =
+    let public convertConfig (config : TetrisRunConfig) : TetrisConfig =
         {
             Width = config.Width
             Height = config.Height
@@ -50,11 +49,10 @@ module GameTetris =
             InputBehavior = TetrisInputBehavior.None
             InputBehaviorTask = config.CreateInputTask()
             CreateInputTask = config.CreateInputTask
-            ConvertToTetrisBehavior = config.ConvertToTetrisBehavior
         }
 
     /// Running of Tetris Game
-    let run (config : TetrisRunConfig<'a>) =
+    let run (config : TetrisRunConfig) =
         let stopWatch = new Stopwatch()
         stopWatch.Start()
         // game start

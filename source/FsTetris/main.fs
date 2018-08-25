@@ -5,7 +5,7 @@ let writeScore (score:int64) =
     Console.SetCursorPosition(7,0)
     Console.Write("{0:#,##0}", score)
 
-let writeBlock (h:TetrisConfig<'a>) (c:TetrisConfig<'a>) =
+let writeBlock (h:TetrisConfig) (c:TetrisConfig) =
     let b1 = Seq.zip h.BlockBit h.ScreenBit |> Seq.map (fun (a,b) -> a ||| b) |> Seq.toArray
     let b2 = Seq.zip c.BlockBit c.ScreenBit |> Seq.map (fun (a,b) -> a ||| b) |> Seq.toArray
     let ch = Seq.zip b1 b2 |> Seq.map (fun (a,b) -> a ^^^ b) |> Seq.toArray

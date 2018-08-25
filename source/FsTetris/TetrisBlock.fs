@@ -74,7 +74,7 @@ module TetrisBlock =
             fun x op -> ((op x 1)%4) &&& 0b11
         ]
 
-    let getFallBlock (conf : TetrisConfig<'a>) =
+    let getFallBlock (conf : TetrisConfig) =
         let rnd = new System.Random()
         let bgi = rnd.Next(0, FallBlocks.Length)        // BlockGroup Index
         let b1 = FallBlocks.[bgi]

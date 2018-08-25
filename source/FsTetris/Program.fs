@@ -1,28 +1,28 @@
 ﻿namespace FsTetris
 open System
-open System.Diagnostics
-open System.Threading.Tasks
 
 module Program =
-    /// create new key input task
-    let getAsyncKeyInput () =
-        Async.StartAsTask (async { let x = System.Console.ReadKey() in return x.Key })
     let convertBehavior (key : ConsoleKey) =
         match key with
-        | ConsoleKey.LeftArrow -> TetrisInputBehavior.LeftTurn
-        | ConsoleKey.RightArrow -> TetrisInputBehavior.RightTurn
-        | ConsoleKey.S -> TetrisInputBehavior.Left
-        | ConsoleKey.F -> TetrisInputBehavior.Right
-        | ConsoleKey.Spacebar -> TetrisInputBehavior.Fall
-        | ConsoleKey.P -> TetrisInputBehavior.Pause
-        | _ -> TetrisInputBehavior.None
+        | ConsoleKey.Z          -> TetrisInputBehavior.LeftTurn
+        | ConsoleKey.X          -> TetrisInputBehavior.RightTurn
+        | ConsoleKey.LeftArrow  -> TetrisInputBehavior.Left
+        | ConsoleKey.RightArrow -> TetrisInputBehavior.Right
+        | ConsoleKey.Spacebar   -> TetrisInputBehavior.Fall
+        | ConsoleKey.C          -> TetrisInputBehavior.Pause
+        | _                     -> TetrisInputBehavior.None
+
+    /// create new key input task
+    let getAsyncKeyInput () =
+        Async.StartAsTask (async {
+            let x = System.Console.ReadKey()
+            return convertBehavior x.Key })
 
     /// create new tetris config
-    let getTetrisConfig() : TetrisRunConfig<ConsoleKey> =
+    let getTetrisConfig() : TetrisRunConfig =
         {
             Width = 20
             Height = 30
             IntervalBlockFallTime = fun _ _ time -> time % 500L = 0L
             CreateInputTask = getAsyncKeyInput
-            ConvertToTetrisBehavior = convertBehavior
         }
