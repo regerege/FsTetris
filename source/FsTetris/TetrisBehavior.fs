@@ -75,7 +75,7 @@ module TetrisBehavior =
 
     /// Rotation of the block
     let rotate (conf : TetrisConfig) =
-        let op = if conf.InputBehavior = TetrisInputBehavior.LeftTurn then (-) else (+)
+        let op = if conf.InputBehavior = TetrisInputBehavior.TurnLeft then (-) else (+)
         let ob = conf.BlockBit |> List.filter ((<)0)
         let bc = conf.BlockConfig
         let bg = bc.BlockGroup
@@ -148,8 +148,8 @@ module TetrisBehavior =
         [
             TetrisInputBehavior.None, id
             TetrisInputBehavior.Pause, id
-            TetrisInputBehavior.LeftTurn, rotate
-            TetrisInputBehavior.RightTurn, rotate
+            TetrisInputBehavior.TurnLeft, rotate
+            TetrisInputBehavior.TurnRight, rotate
             TetrisInputBehavior.Fall, moveDeepest
             TetrisInputBehavior.Right, moveRight
             TetrisInputBehavior.Left, moveLeft

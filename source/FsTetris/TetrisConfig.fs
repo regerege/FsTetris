@@ -16,6 +16,10 @@ open System.Threading.Tasks
 ・TODO: Name Entry (まさぶろうさん希望機能)
 *)
 
+type BlockBehavior =
+    | TurnLeft
+    | TurnRight
+
 /// Behavior definition of Tetris
 type TetrisInputBehavior =
     /// No Action
@@ -25,9 +29,9 @@ type TetrisInputBehavior =
     /// Moved to the right block
     | Right
     /// Turning it counterclockwise block
-    | LeftTurn
+    | TurnLeft
     /// Turning it clockwise block
-    | RightTurn
+    | TurnRight
     /// Fall to the block
     | Fall
     /// Pause the game

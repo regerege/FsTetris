@@ -4,8 +4,8 @@ open System
 module Program =
     let convertBehavior (key : ConsoleKey) =
         match key with
-        | ConsoleKey.Z          -> TetrisInputBehavior.LeftTurn
-        | ConsoleKey.X          -> TetrisInputBehavior.RightTurn
+        | ConsoleKey.Z          -> TetrisInputBehavior.TurnLeft
+        | ConsoleKey.X          -> TetrisInputBehavior.TurnRight
         | ConsoleKey.LeftArrow  -> TetrisInputBehavior.Left
         | ConsoleKey.RightArrow -> TetrisInputBehavior.Right
         | ConsoleKey.Spacebar   -> TetrisInputBehavior.Fall

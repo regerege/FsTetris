@@ -2,7 +2,7 @@
 
 module TetrisBlock =
     /// Fall Blocks
-    let private FallBlocks = [
+    let public FallBlocks = [
         // ■■ 
         [ [0b11;] ]                 // 回転できないブロック！！！
         // 　■
